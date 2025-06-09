@@ -1,0 +1,6 @@
+server iperf -s &
+
+xterm sta1 sta2 
+
+on both terminals simultenuously:
+iperf -c 10.0.0.100 -t 20 -i 1

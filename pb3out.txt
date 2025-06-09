@@ -1,0 +1,183 @@
+Exactly! Here’s the sequence you should follow:
+
+Initial check (before moving sta2):
+
+bash
+Copy code
+sta1 iwconfig sta1-wlan0 essid testwifi
+sta2 iwconfig sta2-wlan0 essid testwifi
+sta1 iwconfig sta1-wlan0
+sta2 iwconfig sta2-wlan0
+sta1 ping -c 5 10.0.0.2
+sta2 ping -c 5 10.0.0.1
+sta2 iperf -s &
+sta1 iperf -c 10.0.0.2 -t 10
+sta2 killall iperf
+Move sta2 far away:
+
+bash
+Copy code
+net.mobility sta2 newPos=150,10,0
+Final check (after moving sta2):
+
+bash
+Copy code
+sta1 iwconfig sta1-wlan0
+sta2 iwconfig sta2-wlan0
+sta1 ping -c 5 10.0.0.2
+sta2 ping -c 5 10.0.0.1
+sta2 iperf -s &
+sta1 iperf -c 10.0.0.2 -t 10
+sta2 killall iperf
+Run these steps and share the outputs after each step, so I can help you with the analysis and justification.
+
+
+
+
+
+
+
+
+
+
+ikachu@pikachu-VMware-Virtual-Platform:~/mininet_lab$ sudo python3 pb3.py
+*** Creating nodes
+*** Configuring wifi nodes
+*** ap1-wlan1: signal range of 120m requires tx power equals to 3dBm.
+*** Starting network
+*** Setting IP addresses
+*** Running CLI
+*** Starting CLI:
+mininet-wifi> sta1 iwconfig sta1-wlan0 essid testwifi
+mininet-wifi> sta2 iwconfig sta2-wlan0 essid testwifi
+mininet-wifi> sta1 iwconfig sta1-wlan0
+sta1-wlan0  IEEE 802.11  ESSID:"testwifi"  
+          Mode:Managed  Frequency:2.412 GHz  Access Point: 02:00:00:00:02:00   
+          Bit Rate:36 Mb/s   Tx-Power=30 dBm   
+          Retry short limit:7   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=62/70  Signal level=-48 dBm  
+          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:8   Missed beacon:0
+
+mininet-wifi> sta2 iwconfig sta2-wlan0
+sta2-wlan0  IEEE 802.11  ESSID:"testwifi"  
+          Mode:Managed  Frequency:2.412 GHz  Access Point: 02:00:00:00:02:00   
+          Bit Rate:36 Mb/s   Tx-Power=30 dBm   
+          Retry short limit:7   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=62/70  Signal level=-48 dBm  
+          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:8   Missed beacon:0
+
+mininet-wifi> sta1 ping -c 5 10.0.0.2
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=11.5 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=5.54 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=5.54 ms
+64 bytes from 10.0.0.2: icmp_seq=4 ttl=64 time=6.43 ms
+64 bytes from 10.0.0.2: icmp_seq=5 ttl=64 time=5.76 ms
+
+--- 10.0.0.2 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4020ms
+rtt min/avg/max/mdev = 5.535/6.956/11.508/2.299 ms
+mininet-wifi> sta2 ping -c 5 10.0.0.1
+PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
+64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=9.37 ms
+
+64 bytes from 10.0.0.1: icmp_seq=2 ttl=64 time=5.42 ms
+64 bytes from 10.0.0.1: icmp_seq=3 ttl=64 time=5.90 ms
+64 bytes from 10.0.0.1: icmp_seq=4 ttl=64 time=6.01 ms
+64 bytes from 10.0.0.1: icmp_seq=5 ttl=64 time=5.61 ms
+
+--- 10.0.0.1 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4006ms
+rtt min/avg/max/mdev = 5.415/6.461/9.371/1.470 ms
+mininet-wifi> sta2 iperf -s &
+mininet-wifi> sta1 iperf -c 10.0.0.2 -t 10
+------------------------------------------------------------
+Client connecting to 10.0.0.2, TCP port 5001
+TCP window size: 85.3 KByte (default)
+------------------------------------------------------------
+[  1] local 10.0.0.1 port 44566 connected with 10.0.0.2 port 5001 (icwnd/mss/irtt=14/1448/5540)
+[ ID] Interval       Transfer     Bandwidth
+[  1] 0.0000-13.2216 sec  15.0 MBytes  9.52 Mbits/sec
+mininet-wifi> sta2 killall iperf
+------------------------------------------------------------
+Server listening on TCP port 5001
+TCP window size: 85.3 KByte (default)
+------------------------------------------------------------
+[  1] local 10.0.0.2 port 5001 connected with 10.0.0.1 port 44566 (icwnd/mss/irtt=14/1448/5471)
+[ ID] Interval       Transfer     Bandwidth
+[  1] 0.0000-13.2124 sec  15.0 MBytes  9.52 Mbits/sec
+mininet-wifi> net.mobility sta2 newPos=150,10,0
+c1
+sta1 sta1-wlan0:wifi
+sta2 sta2-wlan0:wifi
+ap1 lo:  ap1-wlan1:wifi
+mininet-wifi> sta1 iwconfig sta1-wlan0
+sta1-wlan0  IEEE 802.11  ESSID:"testwifi"  
+          Mode:Managed  Frequency:2.412 GHz  Access Point: 02:00:00:00:02:00   
+          Bit Rate:54 Mb/s   Tx-Power=30 dBm   
+          Retry short limit:7   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=62/70  Signal level=-48 dBm  
+          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:11   Missed beacon:0
+
+mininet-wifi> sta2 iwconfig sta2-wlan0
+sta2-wlan0  IEEE 802.11  ESSID:"testwifi"  
+          Mode:Managed  Frequency:2.412 GHz  Access Point: 02:00:00:00:02:00   
+          Bit Rate:54 Mb/s   Tx-Power=30 dBm   
+          Retry short limit:7   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=62/70  Signal level=-48 dBm  
+          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:10   Missed beacon:0
+
+mininet-wifi> sta1 ping -c 5 10.0.0.2
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=5.65 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=6.96 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=6.22 ms
+64 bytes from 10.0.0.2: icmp_seq=4 ttl=64 time=5.62 ms
+64 bytes from 10.0.0.2: icmp_seq=5 ttl=64 time=5.64 ms
+
+--- 10.0.0.2 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4007ms
+rtt min/avg/max/mdev = 5.616/6.015/6.959/0.522 ms
+mininet-wifi> sta2 ping -c 5 10.0.0.1
+PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.
+64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=5.57 ms
+64 bytes from 10.0.0.1: icmp_seq=2 ttl=64 time=5.63 ms
+64 bytes from 10.0.0.1: icmp_seq=3 ttl=64 time=5.43 ms
+64 bytes from 10.0.0.1: icmp_seq=4 ttl=64 time=5.81 ms
+64 bytes from 10.0.0.1: icmp_seq=5 ttl=64 time=5.36 ms
+
+--- 10.0.0.1 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4008ms
+rtt min/avg/max/mdev = 5.357/5.560/5.805/0.156 ms
+mininet-wifi> sta2 iperf -s &
+------------------------------------------------------------
+Server listening on TCP port 5001
+TCP window size: 85.3 KByte (default)
+------------------------------------------------------------
+mininet-wifi> sta1 iperf -c 10.0.0.2 -t 10
+------------------------------------------------------------
+Client connecting to 10.0.0.2, TCP port 5001
+TCP window size: 85.3 KByte (default)
+------------------------------------------------------------
+[  1] local 10.0.0.1 port 45892 connected with 10.0.0.2 port 5001 (icwnd/mss/irtt=14/1448/5424)
+[ ID] Interval       Transfer     Bandwidth
+[  1] 0.0000-13.0103 sec  14.8 MBytes  9.51 Mbits/sec
+mininet-wifi> sta2 killall iperf
+[  1] local 10.0.0.2 port 5001 connected with 10.0.0.1 port 45892 (icwnd/mss/irtt=14/1448/5355)
+[ ID] Interval       Transfer     Bandwidth
+[  1] 0.0000-12.9925 sec  14.8 MBytes  9.52 Mbits/sec
+mininet-wifi> 
+
+

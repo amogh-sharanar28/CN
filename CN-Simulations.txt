@@ -1,0 +1,254 @@
+1.py
+from mininet.node import Controller
+from mininet.log import setLogLevel, info
+from mn_wifi.net import Mininet_wifi
+from mn_wifi.cli import CLI
+from mn_wifi.link import wmediumd
+from mn_wifi.wmediumdConnector import interference
+
+def topology():
+    net = Mininet_wifi(controller=Controller, link=wmediumd, wmediumd_mode=interference)
+
+    info("*** Creating nodes\n")
+    sta1 = net.addStation('sta1', position='10,20,0', wlan='wlan0', ieee80211_mode='a')
+    sta2 = net.addStation('sta2', position='20,20,0', wlan='wlan0', ieee80211_mode='g')
+    sta3 = net.addStation('sta3', position='30,20,0', wlan='wlan0', ieee80211_mode='n')
+    ap1 = net.addAccessPoint('ap1', ssid='wifi-ssid', mode='g', channel='1', position='20,40,0')
+    c1 = net.addController('c1')
+
+    info("*** Configuring wifi nodes\n")
+    net.configureWifiNodes()
+
+    info("*** Creating links\n")
+    net.addLink(sta1, ap1)
+    net.addLink(sta2, ap1)
+    net.addLink(sta3, ap1)
+
+    info("*** Starting network\n")
+    net.build()
+    c1.start()
+    ap1.start([c1])
+
+    info("*** Running CLI\n")
+    CLI(net)
+
+    info("*** Stopping network\n")
+    net.stop()
+
+if _name_ == '_main_':
+    setLogLevel('info')
+    topology()
+
+execution:
+sudo python3 1.py
+under mininet:
+sta1 iperf -s -u -i 1 &
+sta2 iperf -s -u -i 1 &
+sta3 iperf -s -u -i 1 &
+
+ap1 iperf -u -c sta1 -t 10 -i 1 -b 10M -l 512
+ap1 iperf -u -c sta2 -t 10 -i 1 -b 10M -l 512
+ap1 iperf -u -c sta3 -t 10 -i 1 -b 10M -l 512
+
+for plotting(optional):
+import matplotlib.pyplot as plt
+
+protocols = ['802.11a', '802.11g', '802.11n']
+throughput = [6.5, 5.43, 6.37]
+
+plt.bar(protocols, throughput, color=['blue', 'green', 'orange'])
+plt.ylabel('Throughput (Mbps)')
+plt.title('MAC Protocol Performance Comparison')
+plt.ylim(0, 10)
+plt.show()
+
+Observation:Output Analysis
+802.11n (sta3) and 802.11a (sta1) performed similarly (~6.3–6.5 Mbps)
+
+802.11g (sta2) had slightly lower average throughput (~5.4 Mbps)
+
+
+2.py(place under mininet-wifi folder)
+rom mininet.node import Controller
+from mininet.log import setLogLevel
+from mn_wifi.net import Mininet_wifi
+from mn_wifi.cli import CLI
+
+def topology():
+    net = Mininet_wifi(controller=Controller)
+
+    print("*** Creating nodes")
+    sta1 = net.addStation('sta1', position='10,50,0', range=30)
+    sta2 = net.addStation('sta2', position='50,50,0', range=30)
+    ap1 = net.addAccessPoint('ap1', ssid='ssid-ap1', position='30,30,0', range=30)
+    c1 = net.addController('c1')
+
+    net.configureWifiNodes()
+
+    print("*** Setting RTS/CTS threshold")
+    # Set RTS threshold to 0 to enable RTS/CTS, or 9999 to disable it
+    net.setPropagationModel(model="logDistance", exp=4)
+
+    net.start()
+
+    print("*** Run tests manually using iperf")
+    CLI(net)
+    net.stop()
+
+if _name_ == '_main_':
+    setLogLevel('info')
+    topology()
+
+execution:
+sudo python3 2.py
+under mininet:
+(with rts enabled)
+sta1 iwconfig sta1-wlan0 rts 0
+sta2 iwconfig sta2-wlan0 rts 0
+sta1 iperf -s -u -i 1 &
+sta2 iperf -s -u -i 1 &
+ap1 iperf -u -c sta1 -t 10 -i 1 -b 10M
+ap1 iperf -u -c sta2 -t 10 -i 1 -b 10M
+exit
+
+again sudo python3 2.py
+under mininet:
+(with rts disabled)
+sta1 iwconfig sta1-wlan0 rts 9999
+sta2 iwconfig sta2-wlan0 rts 9999
+sta1 iperf -s -u -i 1 &
+sta2 iperf -s -u -i 1 &
+ap1 iperf -u -c sta1 -t 10 -i 1 -b 10M
+ap1 iperf -u -c sta2 -t 10 -i 1 -b 10M
+
+Observation:
+Parameter	     RTS/CTS Enabled (rts=0)	  RTS/CTS Disabled (rts=9999)
+Bandwidth	        ~6–13 Mbps	          < 2.5 Mbps (severe drop)
+Packet Loss / Errors	Minimal	                  High collisions
+Data Transmission	Successful	          Largely failed
+Collision Handling	Effective	          Fails due to hidden terminal
+
+
+3.py(under mininet-wifi folder)
+from mininet.node import Controller
+from mininet.log import setLogLevel
+from mn_wifi.net import Mininet_wifi
+from mn_wifi.cli import CLI
+
+def topology():
+    net = Mininet_wifi(controller=Controller)
+
+    print("*** Creating nodes")
+    sta1 = net.addStation('sta1', position='10,30,0')     # Near AP
+    sta2 = net.addStation('sta2', position='100,30,0')    # Far from AP
+    ap1 = net.addAccessPoint('ap1', ssid='ssid-ap1', mode='g', channel='1', position='50,30,0')
+    c1 = net.addController('c1')
+
+    print("*** Configuring WiFi nodes")
+    net.setPropagationModel(model="logDistance", exp=4)  # Use path loss model
+    net.configureWifiNodes()
+
+    print("*** Starting network")
+    net.build()
+    c1.start()
+    ap1.start([c1])
+
+    print("*** Run iperf tests from AP to sta1 and sta2")
+    CLI(net)
+
+    net.stop()
+
+if __name__ == '__main__':
+    setLogLevel('info')
+    topology()
+
+execution:
+sudo python3 3.py
+sta1 iperf -s -u -i 1 &
+sta2 iperf -s -u -i 1 &
+ap1 iperf -u -c sta1 -t 10 -i 1 -b 10M
+ap1 iperf -u -c sta2 -t 10 -i 1 -b 10M
+
+Observation:
+sta1 (closer): Higher and stable throughput.
+
+sta2 (farther): Degraded throughput due to lower SNR and increased packet loss.
+
+
+4.py
+from mininet.node import Controller
+from mininet.log import setLogLevel
+from mn_wifi.net import Mininet_wifi
+from mn_wifi.cli import CLI
+from mn_wifi.link import wmediumd
+from mn_wifi.wmediumdConnector import interference
+from time import sleep
+
+def topology():
+    net = Mininet_wifi(controller=Controller, link=wmediumd, wmediumd_mode=interference)
+
+    print("*** Creating nodes")
+    sta1 = net.addStation('sta1', position='10,30,0')
+    sta2 = net.addStation('sta2', position='15,30,0')
+    sta3 = net.addStation('sta3', position='20,30,0')
+    sta4 = net.addStation('sta4', position='25,30,0')
+    sta5 = net.addStation('sta5', position='30,30,0')
+    ap1 = net.addAccessPoint('ap1', ssid='wifi', mode='g', channel='1', position='40,30,0')
+    c1 = net.addController('c1')
+
+    print("*** Configuring wifi nodes")
+    net.configureWifiNodes()
+
+    print("*** Starting network")
+    net.build()
+    c1.start()
+    ap1.start([c1])
+
+    # Start iperf UDP servers on each station
+    print("*** Starting iperf UDP servers")
+    for sta in [sta1, sta2, sta3, sta4, sta5]:
+        sta.cmd('iperf -s -u &')
+    sleep(1)
+
+    print("\n*** Running UDP iperf clients from AP to each station\n")
+
+    print("\n===== Throughput to sta1 =====")
+    ap1.cmdPrint(f'iperf -u -c {sta1.IP()} -t 10 -i 1 -b 10M -l 512')
+
+    print("\n===== Throughput to sta2 =====")
+    ap1.cmdPrint(f'iperf -u -c {sta2.IP()} -t 10 -i 1 -b 10M -l 512')
+
+    print("\n===== Throughput to sta3 =====")
+    ap1.cmdPrint(f'iperf -u -c {sta3.IP()} -t 10 -i 1 -b 10M -l 512')
+
+    print("\n===== Throughput to sta4 =====")
+    ap1.cmdPrint(f'iperf -u -c {sta4.IP()} -t 10 -i 1 -b 10M -l 512')
+
+    print("\n===== Throughput to sta5 =====")
+    ap1.cmdPrint(f'iperf -u -c {sta5.IP()} -t 10 -i 1 -b 10M -l 512')
+
+    CLI(net)
+    net.stop()
+
+if _name_ == '_main_':
+    setLogLevel('info')
+    topology()
+
+execution:
+sudo python3 4.py
+
+Observation:
+The simulation demonstrates how the 802.11 MAC protocol behaves under load when five clients receive concurrent traffic from a single AP. The MAC protocol ensures medium access but fails to provide equal bandwidth, highlighting its non-deterministic and contention-based nature. Fairness is not guaranteed, and delay/jitter is introduced due to contention and backoff mechanisms.
+
+
+
+
+
+
+
+
+
+
+
+
+
